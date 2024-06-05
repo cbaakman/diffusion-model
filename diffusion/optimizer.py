@@ -57,24 +57,13 @@ class DiffusionModelOptimizer:
     def get_loss(frames_true: Rigid, frames_pred: Rigid, mask: torch.Tensor) -> torch.Tensor:
 
         # [*]
-        peptide_lengths = mask.sum(dim=-1)
-
-        # [*, N - 1]
-        cn_bond_lengths = get_cn_bond_lengths(frames_pred)
-
-        # [*, N]
-        mask_index = torch.arange(mask.shape[-1] - 1, device=mask.device).unsqueeze(-2).expand(mask.shape[-2], -1)
-        peptide_bond_mask = torch.where((mask_index + 1) < peptide_lengths.unsqueeze(-1), True, False)
-
-        # [*]
-        cn_bond_length_loss = (torch.square(cn_bond_lengths - 1.33) * peptide_bond_mask).sum(dim=-1) / (peptide_lengths - 1)
         fape = compute_fape(
             frames_pred, frames_true, mask,
             frames_pred.get_trans(), frames_true.get_trans(), mask,
             1.0
         )
 
-        return cn_bond_length_loss + fape
+        return fape
 
     def get_beta_alpha_sigma(self, noise_step: int) -> Tuple[float, float, float]:
 
