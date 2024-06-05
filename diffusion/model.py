@@ -55,8 +55,10 @@ class EGNNLayer(torch.nn.Module):
         global_to_local = Rigid.from_tensor_7(frames.invert().to_tensor_7()[..., None, :, :].expand(conv_shape))
 
         # [*, N, N, 1]
-        d2 = torch.square(x[:, :, None, :] - x[:, None, :, :]).sum(dim=-1)
+        r = x[:, :, None, :] - x[:, None, :, :]
+        d2 = torch.square(r).sum(dim=-1)
         dot = (q[..., :, None, :] * q[..., None, :, :]).sum(dim=-1).abs()
+        r = torch.nn.functional.normalize(r, dim=-1)
 
         # [*, N, N, 3]
         local_x = global_to_local.apply(x[..., :, None, :])
@@ -81,7 +83,7 @@ class EGNNLayer(torch.nn.Module):
         delta = self.frame_mlp(m) * message_mask[..., None]
 
         # [*, N, 3]
-        upd_x = (local_to_global.apply(local_x + delta[..., 3:])).sum(dim=-2) / (n_nodes[:, None, None] - 1)
+        upd_x = (x[..., :, None, :] + r * delta[..., 3:]).sum(dim=-2) / (n_nodes[:, None, None] - 1)
 
         # [*, N, 4]
         local_upd_q = torch.nn.functional.normalize((local_q + quat_multiply_by_vec(local_q, delta[..., :3])).sum(dim=-2), dim=-1)
