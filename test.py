@@ -203,7 +203,7 @@ if __name__ == "__main__":
     dm = DiffusionModelOptimizer(T, model)
 
     # train
-    nepoch = 30
+    nepoch = 0
     for epoch_index in range(nepoch):
         _log.debug(f"starting epoch {epoch_index}")
 
@@ -216,7 +216,8 @@ if __name__ == "__main__":
     model.load_state_dict(torch.load(model_path, map_location=device))
 
     test_dataset = MhcpDataset(args.test_hdf5, device)
-    test_entry = test_dataset[0]
+    test_entry_id = random.choice(test_dataset.entry_names)
+    test_entry = test_dataset.get_entry(test_entry_id, device)
 
     # for sampling, make a batch of size 1
     test_entry = {key: test_entry[key].unsqueeze(0) for key in test_entry}
@@ -238,10 +239,10 @@ if __name__ == "__main__":
         "features": test_entry["features"],
     }
 
-    save(true_frames[0], "dm-true.pdb")
-    save(input_frames[0], "dm-input.pdb")
+    save(true_frames[0], f"{test_entry_id}-true.pdb")
+    save(input_frames[0], f"{test_entry_id}-input.pdb")
 
     with torch.no_grad():
         pred_frames = dm.sample(batch, true_frames)
 
-    save(pred_frames[0], "dm-output.pdb")
+    save(pred_frames[0], f"{test_entry_id}-output.pdb")
